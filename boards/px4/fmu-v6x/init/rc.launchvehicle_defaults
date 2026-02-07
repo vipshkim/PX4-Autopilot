@@ -1,0 +1,7 @@
+#!/bin/sh
+#
+# launchvehicle build defaults
+#------------------------------------------------------------------------------
+
+# Force default airframe for launchvehicle build
+param set SYS_AUTOSTART 13201
