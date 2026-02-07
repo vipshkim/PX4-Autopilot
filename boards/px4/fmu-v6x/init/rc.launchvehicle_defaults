@@ -5,3 +5,6 @@
 
 # Force default airframe for launchvehicle build
 param set SYS_AUTOSTART 13201
+
+# Do not require an airspeed sensor by default for launchvehicle
+param set-default SYS_HAS_NUM_ASPD 0
