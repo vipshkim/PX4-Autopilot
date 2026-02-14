@@ -47,13 +47,9 @@
 #include <uavcan/uavcan.hpp>
 #include <uavcan/equipment/esc/RawCommand.hpp>
 #include <uavcan/equipment/esc/Status.hpp>
-#include <lib/perf/perf_counter.h>
 #include <uORB/PublicationMulti.hpp>
-#include <uORB/topics/actuator_outputs.h>
 #include <uORB/topics/esc_status.h>
-#include <drivers/drv_hrt.h>
-#include <drivers/uavcan/node_info.hpp>
-#include <parameters/param.h>
+#include "../node_info.hpp"
 
 class UavcanEscController
 {
@@ -101,7 +97,7 @@ private:
 	typedef uavcan::MethodBinder<UavcanEscController *,
 		void (UavcanEscController::*)(const uavcan::TimerEvent &)> TimerCbBinder;
 
-	bool _initialized{};
+	bool _initialized = false;
 
 	esc_status_s	_esc_status{};
 

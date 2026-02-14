@@ -162,13 +162,6 @@ Mavlink::~Mavlink()
 		} while (running());
 	}
 
-	if (_instance_id >= 0) {
-		{
-			LockGuard lg{mavlink_module_mutex};
-			mavlink_module_instances[_instance_id] = nullptr;
-		}
-		mavlink_instance_count.fetch_sub(1);
-	}
 
 	// if this instance was responsible for checking events then select a new mavlink instance
 	if (check_events()) {
@@ -381,8 +374,13 @@ Mavlink::destroy_all_instances()
 		LockGuard lg{mavlink_module_mutex};
 
 		// we know all threads have exited, so it's safe to delete objects.
-		for (Mavlink *inst_to_del : mavlink_module_instances) {
-			delete inst_to_del;
+		for (int i = 0; i < MAVLINK_COMM_NUM_BUFFERS; i++) {
+			if (mavlink_module_instances[i] != nullptr) {
+				Mavlink *inst = mavlink_module_instances[i];
+				mavlink_module_instances[i] = nullptr;
+				mavlink_instance_count.fetch_sub(1);
+				delete inst;
+			}
 		}
 	}
 
@@ -1435,7 +1433,7 @@ Mavlink::configure_streams_to_default(const char *configure_single_stream)
 		configure_stream_local("ESC_STATUS", 1.0f);
 		configure_stream_local("ESTIMATOR_STATUS", 0.5f);
 		configure_stream_local("EXTENDED_SYS_STATE", 1.0f);
-		configure_stream_local("GIMBAL_DEVICE_ATTITUDE_STATUS", 1.0f);
+		configure_stream_local("GIMBAL_DEVICE_ATTITUDE_STATUS", 5.0f);
 		configure_stream_local("GIMBAL_DEVICE_SET_ATTITUDE", 5.0f);
 		configure_stream_local("GIMBAL_MANAGER_STATUS", 0.5f);
 #if defined(MAVLINK_MSG_ID_GLOBAL_POSITION)
@@ -1513,7 +1511,7 @@ Mavlink::configure_streams_to_default(const char *configure_single_stream)
 		configure_stream_local("EFI_STATUS", 2.0f);
 		configure_stream_local("ESTIMATOR_STATUS", 1.0f);
 		configure_stream_local("EXTENDED_SYS_STATE", 5.0f);
-		configure_stream_local("GIMBAL_DEVICE_ATTITUDE_STATUS", 1.0f);
+		configure_stream_local("GIMBAL_DEVICE_ATTITUDE_STATUS", 5.0f);
 		configure_stream_local("GIMBAL_DEVICE_SET_ATTITUDE", 5.0f);
 		configure_stream_local("GIMBAL_MANAGER_STATUS", 0.5f);
 		configure_stream_local("GLOBAL_POSITION_INT", 50.0f);
@@ -1687,7 +1685,7 @@ Mavlink::configure_streams_to_default(const char *configure_single_stream)
 		configure_stream_local("GPS_GLOBAL_ORIGIN", 1.0f);
 		configure_stream_local("GPS_RAW_INT", unlimited_rate);
 		configure_stream_local("GPS_STATUS", 1.0f);
-		configure_stream_local("GIMBAL_DEVICE_ATTITUDE_STATUS", 0.5f);
+		configure_stream_local("GIMBAL_DEVICE_ATTITUDE_STATUS", 5.0f);
 		configure_stream_local("GIMBAL_MANAGER_STATUS", 0.5f);
 		configure_stream_local("HIGHRES_IMU", 50.0f);
 		configure_stream_local("HOME_POSITION", 0.5f);
@@ -1767,7 +1765,7 @@ Mavlink::configure_streams_to_default(const char *configure_single_stream)
 		configure_stream_local("DISTANCE_SENSOR", 10.0f);
 		configure_stream_local("MOUNT_ORIENTATION", 10.0f);
 		configure_stream_local("OBSTACLE_DISTANCE", 10.0f);
-		configure_stream_local("GIMBAL_DEVICE_ATTITUDE_STATUS", 1.0f);
+		configure_stream_local("GIMBAL_DEVICE_ATTITUDE_STATUS", 5.0f);
 		configure_stream_local("GIMBAL_MANAGER_STATUS", 0.5f);
 		configure_stream_local("GIMBAL_DEVICE_SET_ATTITUDE", 5.0f);
 		configure_stream_local("ESC_INFO", 1.0f);
@@ -1835,7 +1833,7 @@ Mavlink::configure_streams_to_default(const char *configure_single_stream)
 		configure_stream_local("DISTANCE_SENSOR", 1.0f);
 		configure_stream_local("MOUNT_ORIENTATION", 2.0f);
 		configure_stream_local("OBSTACLE_DISTANCE", 2.0f);
-		configure_stream_local("GIMBAL_DEVICE_ATTITUDE_STATUS", 1.0f);
+		configure_stream_local("GIMBAL_DEVICE_ATTITUDE_STATUS", 5.0f);
 		configure_stream_local("GIMBAL_MANAGER_STATUS", 0.5f);
 		configure_stream_local("GIMBAL_DEVICE_SET_ATTITUDE", 2.0f);
 		configure_stream_local("ESC_INFO", 1.0f);
@@ -2921,6 +2919,14 @@ int Mavlink::start_helper(int argc, char *argv[])
 		res = instance->task_main(argc, argv);
 
 		if (res != PX4_OK) {
+			LockGuard lg{mavlink_module_mutex};
+			int instance_id = instance->get_instance_id();
+
+			if (instance_id >= 0) {
+				mavlink_module_instances[instance_id] = nullptr;
+				mavlink_instance_count.fetch_sub(1);
+			}
+
 			delete instance;
 		}
 	}
@@ -3235,8 +3241,9 @@ Mavlink::stop_command(int argc, char *argv[])
 
 				for (int mavlink_instance = 0; mavlink_instance < MAVLINK_COMM_NUM_BUFFERS; mavlink_instance++) {
 					if (mavlink_module_instances[mavlink_instance] == inst) {
-						delete inst;
 						mavlink_module_instances[mavlink_instance] = nullptr;
+						mavlink_instance_count.fetch_sub(1);
+						delete inst;
 						return PX4_OK;
 					}
 				}

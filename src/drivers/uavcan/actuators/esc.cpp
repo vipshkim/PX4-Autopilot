@@ -43,8 +43,6 @@
 #include <drivers/drv_hrt.h>
 #include <lib/atmosphere/atmosphere.h>
 
-#define MOTOR_BIT(x) (1<<(x))
-
 using namespace time_literals;
 
 UavcanEscController::UavcanEscController(uavcan::INode &node) :
@@ -91,7 +89,7 @@ UavcanEscController::update_outputs(uint16_t outputs[MAX_ACTUATORS], uint8_t out
 
 	_prev_cmd_pub = timestamp;
 
-	uavcan::equipment::esc::RawCommand msg = {};
+	uavcan::equipment::esc::RawCommand msg{};
 
 	for (unsigned i = 0; i < output_array_size; i++) {
 		msg.cmd.push_back(static_cast<int>(outputs[i]));
