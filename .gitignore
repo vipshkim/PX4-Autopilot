@@ -46,28 +46,22 @@ GTAGS
 *.creator.user
 *.files
 *.includes
-
 # CLion ignores
 .idea
 cmake-build-*/
-
 posix-configs/SITL/init/test/*_generated
-
 /airframes.md
 /airframes.xml
 /parameters.md
 /parameters.xml
 /modules
 /msg/ros/*.msg
-
 *.gcov
 .coverage
 .coverage.*
-
 # KDevelop ignores
 .kdev4/*
 *.kdev4
-
 # cmake in tree (ninja)
 .ninja_deps
 .ninja_log
@@ -82,7 +76,6 @@ CPackSourceConfig.cmake
 CTestTestfile.cmake
 external/
 rules.ninja
-
 # in tree build
 **/*.a
 **/*.px4mod
@@ -103,12 +96,10 @@ platforms/posix/apps.h
 src/lib/version/build_git_version.h
 src/modules/simulator/simulator_config.h
 src/systemcmds/topic_listener/listener_generated.cpp
-
 !src/drivers/distance_sensor/broadcom/afbrs50/Lib/*
-
 # colcon
 log/
 keys/
 
-# metadata
-_emscripten_sdk/
+# Local tooling leftovers
+.git-rewrite/
